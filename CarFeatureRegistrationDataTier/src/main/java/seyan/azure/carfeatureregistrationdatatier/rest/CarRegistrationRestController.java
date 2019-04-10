@@ -12,6 +12,7 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,14 +36,13 @@ public class CarRegistrationRestController {
         return carRegistrationRepository.save(carRegistration);
     }
 
-    /*
     @PutMapping("/carregistrations/{vinNum}")
     public CarRegistration updateCarReistration(@PathVariable String vinNum,
-            @RequestBody CarRegistration carRegistrationRequest) {
+        @Valid @RequestBody CarRegistration carRegistrationRequest) {
         // find the data from database
         CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
         Set<String> rSet = new HashSet<String>();
-        for (FeatureActivationRepository feature : carRegistrationRequest.getFeatureSet())
+        for (FeatureActivation feature : carRegistrationRequest.getFeatureSet())
         {
             rSet.add(feature.getFeature_name());
         }
@@ -68,7 +68,35 @@ public class CarRegistrationRestController {
         }
         return carRegistrationRepository.save(existingData);
 
-    }*/
+    }
+
+    @PostMapping("/carregistrations/{vinNum}/features")
+    public CarRegistration addFeature(@PathVariable String vinNum, @Valid @RequestBody FeatureActivation featureRequest) {
+        // find the data from database
+        CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
+        // only if this is a new feature request, save.
+        if(existingData.hasFeature(featureRequest.getFeature_name())){
+            return existingData;
+        } else {
+            existingData.addFeature(featureRequest);
+            return carRegistrationRepository.save(existingData);
+        }
+    }
+
+    @DeleteMapping("/carregistrations/{vinNum}/features")
+    public CarRegistration removeFeature(@PathVariable String vinNum, @Valid @RequestBody FeatureActivation featureRequest)
+    {
+        CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
+        // only if this is a new feature request, save.
+        if(existingData.hasFeature(featureRequest.getFeature_name())){
+            existingData.removeFeature(featureRequest.getFeature_name());
+            return carRegistrationRepository.save(existingData);
+        } else {
+            return existingData;            
+        }
+
+    }
+
 
 
 }
