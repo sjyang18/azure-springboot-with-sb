@@ -17,8 +17,8 @@ public class FeatureActivation {
         return this.feature_name;
     }
 
-    public void setFeature_name(String feature_name) {
-        this.feature_name = feature_name;
+    public void setFeature_name(String fname) {
+        this.feature_name = fname;
     }
 
 

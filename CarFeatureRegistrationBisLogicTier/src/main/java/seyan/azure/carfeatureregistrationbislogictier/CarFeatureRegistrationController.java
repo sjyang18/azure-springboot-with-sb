@@ -9,12 +9,17 @@ import java.util.List;
 import java.util.Map;
 
 import javax.validation.Valid;
+import static java.nio.charset.StandardCharsets.*;
+
+import com.google.gson.Gson;
+import com.microsoft.azure.servicebus.Message;
+import com.microsoft.azure.servicebus.QueueClient;
+import com.microsoft.azure.servicebus.ReceiveMode;
+import com.microsoft.azure.servicebus.primitives.ConnectionStringBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,20 +36,36 @@ import org.springframework.web.client.RestTemplate;
 public class CarFeatureRegistrationController {
 
     private static final Logger LOG = LoggerFactory.getLogger(CarFeatureRegistrationController.class);
+    private static final Gson GSON = new Gson();
 
     @Value("${datatier_service_endpoint}")
     private String datatier_service_endpoint;
 
+    @Value("${SB_QUEUE_CONNECTIONSTRING}")
+    private String sb_connectionstring;
+
+    @Value("${QUEUE_NAME}")
+    private String queue_name;
+
     @PostMapping("/vins")
-    public CarRegistration registervin(@Valid @RequestBody CarRegistration request) throws Exception {
+    public CarRegistration registervin(@Valid @RequestBody CarRegistrationRequest request) throws Exception {
 
         RestTemplate restTemplate = new RestTemplate();
         final String baseUrl = datatier_service_endpoint + "/carregistrations";
         LOG.info("Posting a request to " + baseUrl);
 
         URI uri = new URI(baseUrl);
-        ResponseEntity<CarRegistration> result = restTemplate.postForEntity(uri, request, CarRegistration.class);
-        return result.getBody();
+        ResponseEntity<CarRegistration> result = restTemplate.postForEntity(uri, request.composeCarRegistrationRecord(), CarRegistration.class);
+
+        // create a response object out of result
+        
+        CarRegistration body = result.getBody();   
+        CarRegistrationResponse response = new CarRegistrationResponse();
+        response.setVinNum(body.getVinNum());
+        response.setFeatureSetFromFeatureActivations(body.getFeatureSet());
+        this.sendCarRegistrationResponseToSB(response);
+
+        return body;
     }
 
     @GetMapping("/vins/{vinNum}")
@@ -91,17 +112,27 @@ public class CarFeatureRegistrationController {
             @Valid @RequestBody FeatureUpdateRequest request) throws Exception {
         // depending on optype (either unit, bulk), call addfeature or
         // bulkupdatefeatures
-        if (request.getUpdateType() == FeatureUpdateRequest.UpdateType.append) { // append
+        FeatureChangeResponse response = new FeatureChangeResponse();
+        response.setVinNum(vinNum);
+        response.setFeatureSet(request.getFeatureSet());
+        if (request.getUpdateType() == FeatureUpdateRequest.UpdateType.extend) { // extend
             RestTemplate restTemplate = new RestTemplate();
             final String baseUrl = datatier_service_endpoint + "/carregistrations/" + vinNum + "/features";
             URI uri = new URI(baseUrl);
-            for (FeatureActivation feature : request.getFeatureSet()) {
+            for (String fname : request.getFeatureSet()) {
                 LOG.info("Sending a post request (i.e. append new feature to existing featureset ) to " + baseUrl);
-                restTemplate.postForEntity(uri, feature, null);
+                FeatureActivation fa = new FeatureActivation();
+                fa.setFeature_name(fname);
+                restTemplate.postForEntity(uri, fa, null);
             }
+            response.setUpdateType(FeatureChangeResponse.ChangeType.extend);
+            
         } else { // overwrite
-            overwriteFeatureSet(vinNum, request.getFeatureSet());
+            overwriteFeatureSet(vinNum, request.composeActivations());
+            response.setUpdateType(FeatureChangeResponse.ChangeType.overwrite);
         }
+        
+        sendFeatureChangeResponseToSB(response);
         return getfeatures(vinNum);
 
     }
@@ -110,8 +141,10 @@ public class CarFeatureRegistrationController {
     public void removefeatures(@PathVariable String vinNum, @Valid @RequestBody FeatureDeleteRequest request)
             throws Exception {
         
-        LOG.info("Delete invoked");
-
+        LOG.debug("Delete invoked");
+        FeatureChangeResponse response = new FeatureChangeResponse();
+        response.setVinNum(vinNum);
+        response.setFeatureSet(request.getFeaturesToDelete());
         if (request.getDeleteMode() == FeatureDeleteRequest.DeleteMode.selective) {
             // selective delete
             // delete one by one
@@ -120,32 +153,57 @@ public class CarFeatureRegistrationController {
             RestTemplate restTemplate = new RestTemplate();
             final String baseUrl = datatier_service_endpoint + "/carregistrations/" + vinNum + "/features?featureName={featureName}";
 
-            for (FeatureActivation fa : request.getFeaturesToDelete()) {
+            for (FeatureActivation fa : request.composeDeactivations()) {
                 Map<String,Object> uriVariables = new HashMap<>();
                 uriVariables.put("featureName", fa.getFeature_name());
-                LOG.info("Inovking DELETE to " + baseUrl);
-                LOG.info("before invoking restTemplate.delete");
+                LOG.debug("Inovking DELETE to " + baseUrl);
+                LOG.debug("before invoking restTemplate.delete");
                 restTemplate.delete(baseUrl, uriVariables);
-                LOG.info("after invoking restTemplate.delete");
+                LOG.debug("after invoking restTemplate.delete");
+                response.setUpdateType(FeatureChangeResponse.ChangeType.delete_selective);
             }
         }
         else {
             // delete all features
             List<FeatureActivation> emptyFeature = new ArrayList<FeatureActivation>();
             overwriteFeatureSet(vinNum, emptyFeature);
+            response.setUpdateType(FeatureChangeResponse.ChangeType.delete_all);
         }
+        sendFeatureChangeResponseToSB(response);
 
-    }
-
-    private void sendFeatureActivationCode() {
-        
     }
     
-    private void sendRegisterVinNumResponse() {
-
+    private void sendCarRegistrationResponseToSB(CarRegistrationResponse response) throws Exception {
+        
+        QueueClient sendClient = 
+            new QueueClient(new ConnectionStringBuilder(sb_connectionstring, queue_name), ReceiveMode.PEEKLOCK);
+        
+        Message message = new Message(GSON.toJson(response, CarRegistrationResponse.class).getBytes(UTF_8));
+        message.setContentType("application/json");
+        message.setLabel(String.format("%s/%s", queue_name,"CarRegistrationResponse"));
+        message.setMessageId(response.toString());
+        sendClient.sendAsync(message).thenRunAsync(
+            ()-> {
+                LOG.info(String.format("Sent response message for %s in sendCarRegistrationResponseToSB", response.getVinNum()));
+                sendClient.closeAsync();
+            }
+        );
     }
 
-    private void sendUpdateFeatureResponse() {
+    private void sendFeatureChangeResponseToSB(FeatureChangeResponse response) throws Exception {
+        QueueClient sendClient = 
+            new QueueClient(new ConnectionStringBuilder(sb_connectionstring, queue_name), ReceiveMode.PEEKLOCK);
+        
+        Message message = new Message(GSON.toJson(response, FeatureChangeResponse.class).getBytes(UTF_8));
+        message.setContentType("application/json");
+        message.setLabel(String.format("%s/%s", queue_name,"FeatureChangeResponse"));
+        message.setMessageId(response.toString());
+        sendClient.sendAsync(message).thenRunAsync(
+            ()-> {
+                LOG.info(String.format("Sent response message for %s in sendCarRegistrationResponseToSB", response.getVinNum()));
+                sendClient.closeAsync();
+            }
+        );
 
     }
 

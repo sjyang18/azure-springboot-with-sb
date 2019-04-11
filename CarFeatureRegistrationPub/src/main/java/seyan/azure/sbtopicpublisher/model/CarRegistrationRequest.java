@@ -4,7 +4,7 @@ import java.util.List;
 
 public class CarRegistrationRequest {
     private String vinNum;
-    private List<String> features;
+    private List<String> featureSet;
 
     /**
      * @return the vinNum
@@ -22,15 +22,15 @@ public class CarRegistrationRequest {
     /**
      * @return the features
      */
-    public List<String> getFeatures() {
-        return features;
+    public List<String> getFeatureSet() {
+        return featureSet;
     }
 
     /**
      * @param features the features to set
      */
-    public void setFeatures(List<String> features) {
-        this.features = features;
+    public void setFeatureSet(List<String> features) {
+        this.featureSet = features;
     }
 
 

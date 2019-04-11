@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import seyan.azure.sbtopicpublisher.model.CarRegistrationRequest;
+import seyan.azure.sbtopicpublisher.model.FeatureChangeRequest;
 
 @RestController
 public class SBTopicPubController {
@@ -42,8 +43,7 @@ public class SBTopicPubController {
     @Value("${SB_MESSAGE_TIME_TO_LIVE_IN_MIN}")
     private int time_to_live_in_min;
 
-
-    //private TopicClient carRegistrationClient;
+    // private TopicClient carRegistrationClient;
 
     @PostConstruct
     public void init() {
@@ -59,9 +59,9 @@ public class SBTopicPubController {
     }
 
     @PostMapping("/register")
-    public CarRegistrationRequest register(@RequestBody CarRegistrationRequest request) 
-        throws Exception, ServiceBusException {
-        //Map<String, Object> response = new HashMap<>();
+    public CarRegistrationRequest register(@RequestBody CarRegistrationRequest request)
+            throws Exception, ServiceBusException {
+        // Map<String, Object> response = new HashMap<>();
 
         LOG.info(GSON.toJson(request, CarRegistrationRequest.class));
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
@@ -69,7 +69,31 @@ public class SBTopicPubController {
         Message message = new Message(GSON.toJson(request, CarRegistrationRequest.class).getBytes(UTF_8));
         message.setContentType("application/json");
         message.setLabel("car-registration");
-        message.setMessageId("car-registration/"+request.getVinNum()+"/"+timestamp);
+        message.setMessageId("car-registration/" + request.getVinNum() + "/" + timestamp);
+        message.setTimeToLive(Duration.ofMinutes(time_to_live_in_min));
+        System.out.printf("\nMessage sending: Id = %s", message.getMessageId());
+        TopicClient carRegistrationClient = new TopicClient(
+                new ConnectionStringBuilder(sb_connectionstring, topic_name));
+        carRegistrationClient.sendAsync(message).thenRunAsync(() -> {
+            LOG.info("\n\tMessage acknowledged: Id = " + message.getMessageId());
+            carRegistrationClient.closeAsync();
+        });
+
+        return request;
+    }
+
+    @PostMapping("/changefeature")
+    public FeatureChangeRequest register(@RequestBody FeatureChangeRequest request)
+        throws Exception, ServiceBusException {
+        //Map<String, Object> response = new HashMap<>();
+
+        LOG.info(GSON.toJson(request, CarRegistrationRequest.class));
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+
+        Message message = new Message(GSON.toJson(request, FeatureChangeRequest.class).getBytes(UTF_8));
+        message.setContentType("application/json");
+        message.setLabel("changefeature");
+        message.setMessageId("changefeature/"+request.getVinNum()+"/"+timestamp);
         message.setTimeToLive(Duration.ofMinutes(time_to_live_in_min));
         System.out.printf("\nMessage sending: Id = %s", message.getMessageId());
         TopicClient carRegistrationClient = new TopicClient(new ConnectionStringBuilder(sb_connectionstring, topic_name));
@@ -78,9 +102,6 @@ public class SBTopicPubController {
             LOG.info("\n\tMessage acknowledged: Id = " + message.getMessageId());
             carRegistrationClient.closeAsync();
         });
-        
-
-        
         return request;
     }
 

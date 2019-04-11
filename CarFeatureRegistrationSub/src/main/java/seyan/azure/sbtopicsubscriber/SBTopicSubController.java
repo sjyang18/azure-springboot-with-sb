@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import seyan.azure.sbtopicsubscriber.model.CarRegistrationRequest;
+import seyan.azure.sbtopicsubscriber.model.FeatureChangeRequest;
 
 @RestController
 public class SBTopicSubController {
@@ -79,16 +80,27 @@ public class SBTopicSubController {
                 LOG.info("onMessageAsync invoked");
                 // receives message is passed to callback
                 if(message.getLabel() != null
-                 && message.getLabel().contentEquals("car-registration")
                  && message.getContentType() !=null 
                  && message.getContentType().contentEquals("application/json")
                 ) {
-                    byte[] body = message.getBody();
-                    CarRegistrationRequest request = GSON.fromJson(new String(body, UTF_8), CarRegistrationRequest.class);
-                    LOG.info("CarRegistrationRequest recevied : " + request);
-                    LOG.info(" VIN_NUM: " + request.getVinNum());
-                    LOG.info(" Features: "); 
-                    request.getFeatures().forEach(LOG::info);
+                    if(message.getLabel().contentEquals("car-registration"))
+                    {
+                        byte[] body = message.getBody();
+                        CarRegistrationRequest request = GSON.fromJson(new String(body, UTF_8), CarRegistrationRequest.class);
+                        LOG.info("CarRegistrationRequest recevied : " + request);
+                        LOG.info(" VIN_NUM: " + request.getVinNum());
+                        LOG.info(" Features: "); 
+                        request.getFeatureSet().forEach(LOG::info);
+                    }
+                    else if (message.getLabel().contentEquals("changefeature")) {
+                        byte[] body = message.getBody();
+                        FeatureChangeRequest request = GSON.fromJson(new String(body, UTF_8), FeatureChangeRequest.class);
+                        LOG.info("CarRegistrationRequest recevied : " + request);
+                        LOG.info(" VIN_NUM: " + request.getVinNum());
+                        LOG.info(" Features: "); 
+                        request.getFeatureSet().forEach(LOG::info);
+                    }
+                    
 
                 } else{
                     LOG.info("message.getLabel() " + message.getLabel());

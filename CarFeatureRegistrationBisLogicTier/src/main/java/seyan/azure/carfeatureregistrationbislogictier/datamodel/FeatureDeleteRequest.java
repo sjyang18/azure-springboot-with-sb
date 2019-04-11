@@ -1,5 +1,6 @@
 package seyan.azure.carfeatureregistrationbislogictier.datamodel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FeatureDeleteRequest {
@@ -10,7 +11,7 @@ public class FeatureDeleteRequest {
     };
     
     private DeleteMode deleteMode;
-    private List<FeatureActivation> featuresToDelete;
+    private List<String> featuresToDelete;
 
     public DeleteMode getDeleteMode() {
         return this.deleteMode;
@@ -20,13 +21,26 @@ public class FeatureDeleteRequest {
         this.deleteMode = deleteMode;
     }
 
-    public List<FeatureActivation> getFeaturesToDelete() {
+    public List<String> getFeaturesToDelete() {
         return this.featuresToDelete;
     }
 
-    public void setFeaturesToDelete(List<FeatureActivation> featuresToDelete) {
+    public void setFeaturesToDelete(List<String> featuresToDelete) {
         this.featuresToDelete = featuresToDelete;
     }
+
+    public List<FeatureActivation> composeDeactivations() {
+        List<FeatureActivation> lst = new ArrayList<>();
+
+        for(String fname: featuresToDelete){
+            FeatureActivation fa = new FeatureActivation();
+            fa.setFeature_name(fname);
+            lst.add(fa);
+        }
+        return lst;
+    }
+
+
 
 
 }
