@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,6 +35,12 @@ public class CarRegistrationRestController {
     @PostMapping("/carregistrations")
     public CarRegistration createCarRegistration(@Valid @RequestBody CarRegistration carRegistration) {
         return carRegistrationRepository.save(carRegistration);
+    }
+
+    @GetMapping("/carregistrations/{vinNum}")
+    public CarRegistration getCarRegistrationInfo(@PathVariable String vinNum) {
+        CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
+        return existingData;
     }
 
     @PutMapping("/carregistrations/{vinNum}")
@@ -70,6 +77,12 @@ public class CarRegistrationRestController {
 
     }
 
+    @GetMapping("/carregistrations/{vinNum}/features")
+    public CarRegistration getFeatureSet(@PathVariable String vinNum) {
+        CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
+        return existingData;
+    }
+
     @PostMapping("/carregistrations/{vinNum}/features")
     public CarRegistration addFeature(@PathVariable String vinNum, @Valid @RequestBody FeatureActivation featureRequest) {
         // find the data from database
@@ -84,12 +97,12 @@ public class CarRegistrationRestController {
     }
 
     @DeleteMapping("/carregistrations/{vinNum}/features")
-    public CarRegistration removeFeature(@PathVariable String vinNum, @Valid @RequestBody FeatureActivation featureRequest)
+    public CarRegistration removeFeature(@PathVariable String vinNum, @RequestParam String featureName)
     {
         CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
         // only if this is a new feature request, save.
-        if(existingData.hasFeature(featureRequest.getFeature_name())){
-            existingData.removeFeature(featureRequest.getFeature_name());
+        if(existingData.hasFeature(featureName)){
+            existingData.removeFeature(featureName);
             return carRegistrationRepository.save(existingData);
         } else {
             return existingData;            
