@@ -4,10 +4,12 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import javax.annotation.PostConstruct;
 import static java.nio.charset.StandardCharsets.*;
 
+import java.net.URI;
 
 import com.google.gson.Gson;
 import com.microsoft.azure.servicebus.ExceptionPhase;
@@ -17,13 +19,15 @@ import com.microsoft.azure.servicebus.MessageHandlerOptions;
 import com.microsoft.azure.servicebus.ReceiveMode;
 import com.microsoft.azure.servicebus.SubscriptionClient;
 import com.microsoft.azure.servicebus.primitives.ConnectionStringBuilder;
-import com.microsoft.azure.servicebus.primitives.ServiceBusException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import seyan.azure.sbtopicsubscriber.model.CarRegistrationRequest;
 import seyan.azure.sbtopicsubscriber.model.FeatureChangeRequest;
@@ -42,9 +46,12 @@ public class SBTopicSubController {
 
     @Value("${TOPIC_NAME}")
     private String topic_name;
-    
+
     @Value("${SUBSCRIPTION_NAME}")
     private String subscription_name1;
+
+    @Value("${LOGIC_SERVICE_ENDPOINT}")
+    private String logic_service_endpoint;
 
     private SubscriptionClient sbclient1 = null;
 
@@ -56,49 +63,71 @@ public class SBTopicSubController {
         map.put("hostname", hostname);
         return map;
     }
-    
-    
+
     @PostConstruct
     public void init() throws Exception {
         this.sbclient1 = new SubscriptionClient(
-            new ConnectionStringBuilder(sb_connectionstring, topic_name+"/subscriptions/"+ subscription_name1),
-            ReceiveMode.PEEKLOCK
-            );
+                new ConnectionStringBuilder(sb_connectionstring, topic_name + "/subscriptions/" + subscription_name1),
+                ReceiveMode.PEEKLOCK);
         registerMessageHandler();
 
         LOG.info("Ready to receive topic message from " + topic_name);
     }
 
-    private void registerMessageHandler() throws Exception
-    {
+    @Async
+    private CompletableFuture<String> registervin(CarRegistrationRequest request) throws Exception {
+        final String baseUrl = logic_service_endpoint + "/carfeatureregistry/vins";
+        RestTemplate restTemplate = new RestTemplate();
+        LOG.info("Posting a request to " + baseUrl);
+        ResponseEntity<String> result = restTemplate.postForEntity(new URI(baseUrl), request, String.class);
+        return CompletableFuture.completedFuture(result.getBody());
+    }
+
+    private void registerMessageHandler() throws Exception {
 
         // register the RegisterMessageHandler callback
-    	IMessageHandler messageHandler = new IMessageHandler() {
+        IMessageHandler messageHandler = new IMessageHandler() {
             // callback invoked when the message handler loop has obtained a message
             public CompletableFuture<Void> onMessageAsync(IMessage message) {
 
                 LOG.info("onMessageAsync invoked");
                 // receives message is passed to callback
-                if(message.getLabel() != null
-                 && message.getContentType() !=null 
-                 && message.getContentType().contentEquals("application/json")
-                ) {
-                    if(message.getLabel().contentEquals("car-registration"))
-                    {
+                if (message.getLabel() != null && message.getContentType() != null
+                        && message.getContentType().contentEquals("application/json")) {
+                    if (message.getLabel().contentEquals("car-registration")) {
                         byte[] body = message.getBody();
-                        CarRegistrationRequest request = GSON.fromJson(new String(body, UTF_8), CarRegistrationRequest.class);
+                        CarRegistrationRequest request = GSON.fromJson(new String(body, UTF_8),
+                                CarRegistrationRequest.class);
                         LOG.info("CarRegistrationRequest recevied : " + request);
                         LOG.info(" VIN_NUM: " + request.getVinNum());
-                        LOG.info(" Features: "); 
-                        request.getFeatureSet().forEach(LOG::info);
+                        try {
+                            CompletableFuture<String> result = registervin(request);
+
+                            result.thenRunAsync(() -> {
+                                LOG.info("CarRegistrationRequest procoessed");
+                                try {
+                                    LOG.info(String.format("%s", result.get()));
+                                } catch (InterruptedException | ExecutionException e) {
+                                    e.printStackTrace();
+                                }
+
+                            });
+                        }
+                        catch(Exception e) {
+                            LOG.info("Failed to foward CarRegistrationRequest to logic layer");
+                            LOG.info(e.getMessage());
+                            LOG.info(e.getStackTrace().toString());
+                            return sbclient1.abandonAsync(message.getLockToken());
+                        }
+                        
+                        
                     }
                     else if (message.getLabel().contentEquals("changefeature")) {
                         byte[] body = message.getBody();
                         FeatureChangeRequest request = GSON.fromJson(new String(body, UTF_8), FeatureChangeRequest.class);
-                        LOG.info("CarRegistrationRequest recevied : " + request);
+                        LOG.info("FeatureChangeRequest recevied : " + request);
                         LOG.info(" VIN_NUM: " + request.getVinNum());
                         LOG.info(" Features: "); 
-                        request.getFeatureSet().forEach(LOG::info);
                     }
                     
 
