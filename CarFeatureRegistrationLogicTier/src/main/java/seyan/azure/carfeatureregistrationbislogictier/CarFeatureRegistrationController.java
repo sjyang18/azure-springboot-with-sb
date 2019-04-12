@@ -48,7 +48,7 @@ public class CarFeatureRegistrationController {
     private String queue_name;
 
     @PostMapping("/vins")
-    public CarRegistration registervin(@Valid @RequestBody CarRegistrationRequest request) throws Exception {
+    public CarRegistration registervin(@Valid @RequestBody CarRegistrationPayload request) throws Exception {
 
         RestTemplate restTemplate = new RestTemplate();
         final String baseUrl = datatier_service_endpoint + "/carregistrations";
@@ -58,12 +58,8 @@ public class CarFeatureRegistrationController {
         ResponseEntity<CarRegistration> result = restTemplate.postForEntity(uri, request.composeCarRegistrationRecord(), CarRegistration.class);
 
         // create a response object out of result
-        
-        CarRegistration body = result.getBody();   
-        CarRegistrationResponse response = new CarRegistrationResponse();
-        response.setVinNum(body.getVinNum());
-        response.setFeatureSetFromFeatureActivations(body.getFeatureSet());
-        this.sendCarRegistrationResponseToSB(response);
+        CarRegistration body = result.getBody();  
+        this.sendCarRegistrationPayloadToSB(request);
 
         return body;
     }
@@ -84,7 +80,7 @@ public class CarFeatureRegistrationController {
         RestTemplate restTemplate = new RestTemplate();
         final String baseUrl = datatier_service_endpoint + "/carregistrations/" + vinNum;
         URI uri = new URI(baseUrl);
-        LOG.info("Putting a request to " + baseUrl);
+        LOG.info("Getting a request to " + baseUrl);
 
         CarRegistration queryResult = restTemplate.getForObject(uri, CarRegistration.class);
         return queryResult.getFeatureSet();
@@ -107,15 +103,39 @@ public class CarFeatureRegistrationController {
         return putRequest;
     }
 
-    @PutMapping("/vins/{vinNum}/features")
-    public List<FeatureActivation> updatefeatures(@PathVariable String vinNum,
-            @Valid @RequestBody FeatureUpdateRequest request) throws Exception {
+    @PostMapping("/vins/{vinNum}/features")
+    public List<FeatureActivation>  changefeatures(
+        @PathVariable String vinNum,
+        @Valid @RequestBody FeatureChangePayload request
+    )  throws Exception {
+
+        LOG.info("changeType: " + request.getChangeType().toString());
+
+        if(
+            request.getChangeType() == FeatureChangePayload.ChangeType.extend ||
+            request.getChangeType() == FeatureChangePayload.ChangeType.overwrite
+        ){
+            LOG.info("calling updatefeatures");
+            updatefeatures(vinNum, request);
+
+        }else if(
+            request.getChangeType() == FeatureChangePayload.ChangeType.delete_all ||
+            request.getChangeType() == FeatureChangePayload.ChangeType.delete_selective
+        ) {
+            LOG.info("calling removefeatures");
+            removefeatures(vinNum, request);
+        }
+        
+        return getfeatures(vinNum);
+    }
+    
+    private List<FeatureActivation> updatefeatures(
+        String vinNum,
+        FeatureChangePayload request) throws Exception {
         // depending on optype (either unit, bulk), call addfeature or
         // bulkupdatefeatures
-        FeatureChangeResponse response = new FeatureChangeResponse();
-        response.setVinNum(vinNum);
-        response.setFeatureSet(request.getFeatureSet());
-        if (request.getUpdateType() == FeatureUpdateRequest.UpdateType.extend) { // extend
+
+        if (request.getChangeType() == FeatureChangePayload.ChangeType.extend) { // extend
             RestTemplate restTemplate = new RestTemplate();
             final String baseUrl = datatier_service_endpoint + "/carregistrations/" + vinNum + "/features";
             URI uri = new URI(baseUrl);
@@ -125,27 +145,34 @@ public class CarFeatureRegistrationController {
                 fa.setFeature_name(fname);
                 restTemplate.postForEntity(uri, fa, null);
             }
-            response.setUpdateType(FeatureChangeResponse.ChangeType.extend);
             
         } else { // overwrite
-            overwriteFeatureSet(vinNum, request.composeActivations());
-            response.setUpdateType(FeatureChangeResponse.ChangeType.overwrite);
-        }
-        
-        sendFeatureChangeResponseToSB(response);
+            overwriteFeatureSet(vinNum, request.composeInternalFeatureSetFormat());
+        }       
+        sendFeatureChangePayloadToSB(request);
         return getfeatures(vinNum);
 
     }
 
     @DeleteMapping("/vins/{vinNum}/features")
-    public void removefeatures(@PathVariable String vinNum, @Valid @RequestBody FeatureDeleteRequest request)
+    public void deletefeatures(@PathVariable String vinNum, @Valid @RequestBody FeatureChangePayload request)
+            throws Exception
+    {
+        if(
+            request.getChangeType() == FeatureChangePayload.ChangeType.delete_all ||
+            request.getChangeType() == FeatureChangePayload.ChangeType.delete_selective
+        ) {
+            removefeatures(vinNum, request);
+        }
+
+    }
+
+    private void removefeatures(String vinNum, FeatureChangePayload request)
             throws Exception {
         
         LOG.debug("Delete invoked");
-        FeatureChangeResponse response = new FeatureChangeResponse();
-        response.setVinNum(vinNum);
-        response.setFeatureSet(request.getFeaturesToDelete());
-        if (request.getDeleteMode() == FeatureDeleteRequest.DeleteMode.selective) {
+
+        if (request.getChangeType() == FeatureChangePayload.ChangeType.delete_selective) {
             // selective delete
             // delete one by one
             // DELETE "/carregistrations/{vinNum}/features"
@@ -153,34 +180,32 @@ public class CarFeatureRegistrationController {
             RestTemplate restTemplate = new RestTemplate();
             final String baseUrl = datatier_service_endpoint + "/carregistrations/" + vinNum + "/features?featureName={featureName}";
 
-            for (FeatureActivation fa : request.composeDeactivations()) {
+            for (String fa : request.getFeatureSet()) {
                 Map<String,Object> uriVariables = new HashMap<>();
-                uriVariables.put("featureName", fa.getFeature_name());
+                uriVariables.put("featureName", fa);
                 LOG.debug("Inovking DELETE to " + baseUrl);
                 LOG.debug("before invoking restTemplate.delete");
                 restTemplate.delete(baseUrl, uriVariables);
                 LOG.debug("after invoking restTemplate.delete");
-                response.setUpdateType(FeatureChangeResponse.ChangeType.delete_selective);
             }
         }
         else {
             // delete all features
             List<FeatureActivation> emptyFeature = new ArrayList<FeatureActivation>();
             overwriteFeatureSet(vinNum, emptyFeature);
-            response.setUpdateType(FeatureChangeResponse.ChangeType.delete_all);
         }
-        sendFeatureChangeResponseToSB(response);
+        sendFeatureChangePayloadToSB(request);
 
     }
     
-    private void sendCarRegistrationResponseToSB(CarRegistrationResponse response) throws Exception {
+    private void sendCarRegistrationPayloadToSB(CarRegistrationPayload response) throws Exception {
         
         QueueClient sendClient = 
             new QueueClient(new ConnectionStringBuilder(sb_connectionstring, queue_name), ReceiveMode.PEEKLOCK);
         
-        Message message = new Message(GSON.toJson(response, CarRegistrationResponse.class).getBytes(UTF_8));
+        Message message = new Message(GSON.toJson(response, CarRegistrationPayload.class).getBytes(UTF_8));
         message.setContentType("application/json");
-        message.setLabel(String.format("%s/%s", queue_name,"CarRegistrationResponse"));
+        message.setLabel(String.format("%s/%s", queue_name,"CarRegistrationPayload"));
         message.setMessageId(response.toString());
         sendClient.sendAsync(message).thenRunAsync(
             ()-> {
@@ -190,11 +215,11 @@ public class CarFeatureRegistrationController {
         );
     }
 
-    private void sendFeatureChangeResponseToSB(FeatureChangeResponse response) throws Exception {
+    private void sendFeatureChangePayloadToSB(FeatureChangePayload response) throws Exception {
         QueueClient sendClient = 
             new QueueClient(new ConnectionStringBuilder(sb_connectionstring, queue_name), ReceiveMode.PEEKLOCK);
         
-        Message message = new Message(GSON.toJson(response, FeatureChangeResponse.class).getBytes(UTF_8));
+        Message message = new Message(GSON.toJson(response, FeatureChangePayload.class).getBytes(UTF_8));
         message.setContentType("application/json");
         message.setLabel(String.format("%s/%s", queue_name,"FeatureChangeResponse"));
         message.setMessageId(response.toString());

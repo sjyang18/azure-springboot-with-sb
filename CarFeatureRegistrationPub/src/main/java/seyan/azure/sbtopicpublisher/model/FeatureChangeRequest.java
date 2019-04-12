@@ -11,7 +11,7 @@ public class FeatureChangeRequest {
         delete_all
     };
     private String vinNum;
-    private ChangeType requestType;
+    private ChangeType changeType;
     private List<String> featureSet;
 
     public String getVinNum() {
@@ -22,12 +22,12 @@ public class FeatureChangeRequest {
         this.vinNum = vinNum;
     }
 
-    public ChangeType getUpdateType() {
-        return this.requestType;
+    public ChangeType getChangeType() {
+        return this.changeType;
     }
 
-    public void setUpdateType(ChangeType requestType) {
-        this.requestType = requestType;
+    public void setChangeType(ChangeType changeType) {
+        this.changeType = changeType;
     }
 
     public List<String> getFeatureSet() {

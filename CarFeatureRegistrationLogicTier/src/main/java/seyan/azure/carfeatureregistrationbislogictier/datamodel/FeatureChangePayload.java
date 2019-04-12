@@ -3,22 +3,32 @@ package seyan.azure.carfeatureregistrationbislogictier.datamodel;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FeatureUpdateRequest {
+public class FeatureChangePayload {
     
-    public enum UpdateType {
+    public enum ChangeType {
         extend,
-        overwrite
+        overwrite,
+        delete_selective,
+        delete_all
     };
-    
-    private UpdateType updateType;
+    private String vinNum;
+    private ChangeType changeType;
     private List<String> featureSet;
 
-    public UpdateType getUpdateType() {
-        return this.updateType;
+    public String getVinNum() {
+        return this.vinNum;
     }
 
-    public void setUpdateType(UpdateType updateType) {
-        this.updateType = updateType;
+    public void setVinNum(String vinNum) {
+        this.vinNum = vinNum;
+    }
+
+    public ChangeType getChangeType() {
+        return this.changeType;
+    }
+
+    public void setChangeType(ChangeType changeType) {
+        this.changeType = changeType;
     }
 
     public List<String> getFeatureSet() {
@@ -29,7 +39,7 @@ public class FeatureUpdateRequest {
         this.featureSet = featureSet;
     }
     
-    public List<FeatureActivation> composeActivations() {
+    public List<FeatureActivation> composeInternalFeatureSetFormat() {
         List<FeatureActivation> lst = new ArrayList<>();
 
         for(String fname: featureSet){
@@ -39,4 +49,5 @@ public class FeatureUpdateRequest {
         }
         return lst;
     }
+
 }

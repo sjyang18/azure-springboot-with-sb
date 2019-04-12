@@ -3,7 +3,7 @@ package seyan.azure.carfeatureregistrationbislogictier.datamodel;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CarRegistrationRequest {
+public class CarRegistrationPayload {
 
     private String vinNum;
     private List<String> featureSet = new ArrayList<>();
@@ -62,6 +62,14 @@ public class CarRegistrationRequest {
         }
         cr.setFeatureSet(lst);
         return cr;
+    }
+    
+    public void setFeatureSetFromFeatureActivations(List<FeatureActivation> featureSet) {
+        this.featureSet = new ArrayList<>();
+
+        for(FeatureActivation fa: featureSet){
+            this.featureSet.add(fa.getFeature_name());
+        }
     }
 
 }

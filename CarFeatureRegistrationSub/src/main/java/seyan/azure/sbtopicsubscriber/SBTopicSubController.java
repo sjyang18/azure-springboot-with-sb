@@ -38,6 +38,8 @@ public class SBTopicSubController {
 
     private static final Logger LOG = LoggerFactory.getLogger(SBTopicSubController.class);
 
+    private static final Object Void = null;
+
     @Value("${HOSTNAME:NOTKNOWN}")
     private String hostname;
 
@@ -83,6 +85,15 @@ public class SBTopicSubController {
         return CompletableFuture.completedFuture(result.getBody());
     }
 
+    @Async
+    private CompletableFuture<String> changeFeatures(FeatureChangeRequest request) throws Exception {
+        final String baseUrl = logic_service_endpoint + String.format("/carfeatureregistry/vins/%s/features", request.getVinNum());
+        RestTemplate restTemplate = new RestTemplate();
+        LOG.info("Sending a post request to " + baseUrl);
+        ResponseEntity<String> result = restTemplate.postForEntity(new URI(baseUrl), request, String.class);
+        return CompletableFuture.completedFuture(result.getBody());
+    }
+
     private void registerMessageHandler() throws Exception {
 
         // register the RegisterMessageHandler callback
@@ -104,7 +115,7 @@ public class SBTopicSubController {
                             CompletableFuture<String> result = registervin(request);
 
                             result.thenRunAsync(() -> {
-                                LOG.info("CarRegistrationRequest procoessed");
+                                LOG.info("CarRegistrationRequest processed");
                                 try {
                                     LOG.info(String.format("%s", result.get()));
                                 } catch (InterruptedException | ExecutionException e) {
@@ -127,7 +138,26 @@ public class SBTopicSubController {
                         FeatureChangeRequest request = GSON.fromJson(new String(body, UTF_8), FeatureChangeRequest.class);
                         LOG.info("FeatureChangeRequest recevied : " + request);
                         LOG.info(" VIN_NUM: " + request.getVinNum());
-                        LOG.info(" Features: "); 
+                        LOG.info(" body : " + new String(body, UTF_8));
+                        try {
+                            CompletableFuture<String> result = changeFeatures(request);
+
+                            result.thenRunAsync(() -> {
+                                LOG.info("FeatureChangeRequest processed");
+                                try {
+                                    LOG.info(String.format("%s", result.get()));
+                                } catch (InterruptedException | ExecutionException e) {
+                                    e.printStackTrace();
+                                }
+
+                            });
+                        }
+                        catch(Exception e) {
+                            LOG.info("Failed to foward changefeature to logic layer");
+                            LOG.info(e.getMessage());
+                            LOG.info(e.getStackTrace().toString());
+                            return sbclient1.abandonAsync(message.getLockToken());
+                        } 
                     }
                     
 

@@ -87,7 +87,7 @@ public class SBTopicPubController {
         throws Exception, ServiceBusException {
         //Map<String, Object> response = new HashMap<>();
 
-        LOG.info(GSON.toJson(request, CarRegistrationRequest.class));
+        LOG.info(GSON.toJson(request, FeatureChangeRequest.class));
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
         Message message = new Message(GSON.toJson(request, FeatureChangeRequest.class).getBytes(UTF_8));
