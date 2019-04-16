@@ -18,7 +18,44 @@
 		<java.version>1.8</java.version>
 		<azure.version>2.1.2</azure.version>
 	</properties>
-
+	<profiles>
+		<profile>
+			<id>ocp</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+					</plugin>
+					<plugin>
+						<groupId>io.fabric8</groupId>
+						<artifactId>fabric8-maven-plugin</artifactId>
+						<version>4.0.0</version>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>aks</id>
+			<properties>
+				<docker.image.prefix>standalone1a70.azurecr.io</docker.image.prefix>
+				<fabric8.generator.name>${docker.image.prefix}/${project.artifactId}:${project.version}</fabric8.generator.name>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+					</plugin>
+					<plugin>
+						<groupId>io.fabric8</groupId>
+						<artifactId>fabric8-maven-plugin</artifactId>
+						<version>4.0.0</version>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 	<dependencies>
 		<dependency>
 			<groupId>com.microsoft.azure</groupId>
@@ -50,20 +87,6 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-			<plugin>
-				<groupId>io.fabric8</groupId>
-				<artifactId>fabric8-maven-plugin</artifactId>
-				<version>4.0.0</version>
-			</plugin>
-		</plugins>
-	</build>
 
 	<repositories>
 		<repository>
