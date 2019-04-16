@@ -1,0 +1,15 @@
+spec:
+  template:
+    spec:
+      containers:
+      - env:
+        - name: TOPIC_NAME
+          valueFrom:
+            secretKeyRef:
+              name: topicsb-secret
+              key: TOPIC_NAME
+        - name: SB_CONNECTIONSTRING
+          valueFrom:
+            secretKeyRef:
+              name: topicsb-secret
+              key: SB_CONNECTIONSTRING

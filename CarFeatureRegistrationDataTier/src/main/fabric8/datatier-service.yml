@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    fabric8.io/git-branch: master
+    fabric8.io/git-url: 'git@github.com:sjyang18/azure-springboot-with-sb.git'
+    fabric8.io/scm-tag: HEAD
+    fabric8.io/scm-url: >-
+      https://github.com/spring-projects/spring-boot/spring-boot-starter-parent/carfeatureregistrationdatatier
+    prometheus.io/port: '9779'
+    prometheus.io/scrape: 'true'
+  labels:
+    app: carfeatureregistrationdatatier
+    expose: 'false'
+    group: seyan.azure
+    provider: fabric8
+  name: carfeatureregistrationdatatier
+  namespace: car-registry
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: carfeatureregistrationdatatier
+    group: seyan.azure
+    provider: fabric8
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
