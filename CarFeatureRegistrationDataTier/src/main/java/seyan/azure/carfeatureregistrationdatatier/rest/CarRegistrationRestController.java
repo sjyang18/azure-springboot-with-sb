@@ -9,6 +9,8 @@ import java.util.Set;
 
 import javax.validation.Valid;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,8 +23,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import ch.qos.logback.core.joran.conditional.ElseAction;
+
 @RestController
 public class CarRegistrationRestController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CarRegistrationRestController.class);
 
     @Autowired
     private CarRegistrationRepository carRegistrationRepository;
@@ -34,7 +40,15 @@ public class CarRegistrationRestController {
 
     @PostMapping("/carregistrations")
     public CarRegistration createCarRegistration(@Valid @RequestBody CarRegistration carRegistration) {
-        return carRegistrationRepository.save(carRegistration);
+        // check if this is the existing car with the vin
+        CarRegistration dataWithId = carRegistrationRepository.findByVinNum(carRegistration.getVinNum());
+        if (dataWithId == null) {
+            LOG.info("new registration for a car with vin :" + carRegistration.getVinNum());
+            return carRegistrationRepository.save(carRegistration);
+        } else {
+            LOG.info("updating car registration with vin " + carRegistration.getVinNum());
+            return updateCarReistration(carRegistration.getVinNum(), carRegistration);
+        }
     }
 
     @GetMapping("/carregistrations/{vinNum}")
@@ -73,8 +87,17 @@ public class CarRegistrationRestController {
         {
             existingData.addFeature(feature2add);
         }
-        return carRegistrationRepository.save(existingData);
 
+        if(eSetToRemove.size() > 0 && rSet.size() > 0) {
+            // only when you need update, save.
+            LOG.info("saving changes to database");
+            return carRegistrationRepository.save(existingData);
+        } else 
+        {
+            LOG.info("no changes to database in this update call");
+            return getFeatureSet(vinNum);
+        }
+        
     }
 
     @GetMapping("/carregistrations/{vinNum}/features")
@@ -92,6 +115,7 @@ public class CarRegistrationRestController {
             return existingData;
         } else {
             existingData.addFeature(featureRequest);
+            LOG.info("saving changes to database in addFeature");
             return carRegistrationRepository.save(existingData);
         }
     }
@@ -103,6 +127,7 @@ public class CarRegistrationRestController {
         // only if this is a new feature request, save.
         if(existingData.hasFeature(featureName)){
             existingData.removeFeature(featureName);
+            LOG.info("saving changes to database in removeFeature");
             return carRegistrationRepository.save(existingData);
         } else {
             return existingData;            
