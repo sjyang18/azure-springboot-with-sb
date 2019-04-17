@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postressql
+  namespace: car-registry
+spec:
+  externalName: XXXXX
+  type: ExternalName
+status:
+  loadBalancer: {}

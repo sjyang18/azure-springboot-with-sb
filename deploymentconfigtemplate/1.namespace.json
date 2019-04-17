@@ -1,0 +1,10 @@
+{
+  "kind": "Namespace",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "car-registry",
+    "labels": {
+      "name": "car-reistry"
+    }
+  }
+}
