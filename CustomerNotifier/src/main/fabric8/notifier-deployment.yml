@@ -1,0 +1,16 @@
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - env:
+        - name: SB_QUEUE_CONNECTIONSTRING  
+          valueFrom:
+            secretKeyRef:
+              name: outputqueue-secret
+              key: SB_QUEUE_CONNECTIONSTRING
+        - name: QUEUE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: outputqueue-secret
+              key: QUEUE_NAME
