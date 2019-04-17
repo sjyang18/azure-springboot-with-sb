@@ -39,7 +39,8 @@ public class CarRegistrationRestController {
     }
 
     @PostMapping("/carregistrations")
-    public CarRegistration createCarRegistration(@Valid @RequestBody CarRegistration carRegistration) {
+    public CarRegistration createCarRegistration(@Valid @RequestBody CarRegistration carRegistration) 
+        throws Exception {
         // check if this is the existing car with the vin
         CarRegistration dataWithId = carRegistrationRepository.findByVinNum(carRegistration.getVinNum());
         if (dataWithId == null) {
@@ -59,45 +60,48 @@ public class CarRegistrationRestController {
 
     @PutMapping("/carregistrations/{vinNum}")
     public CarRegistration updateCarReistration(@PathVariable String vinNum,
-        @Valid @RequestBody CarRegistration carRegistrationRequest) {
+        @Valid @RequestBody CarRegistration carRegistrationRequest) throws Exception {
         // find the data from database
         CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
-        Set<String> rSet = new HashSet<String>();
-        for (FeatureActivation feature : carRegistrationRequest.getFeatureSet())
-        {
-            rSet.add(feature.getFeature_name());
-        }
-
-        Set<FeatureActivation> eSetToRemove = new HashSet<FeatureActivation>();
-        for(FeatureActivation feature : existingData.getFeatureSet())
-        {
-            if(rSet.contains(feature.getFeature_name())) {
-                rSet.remove(feature.getFeature_name());
-            } else {
-                eSetToRemove.add(feature);
+        if(existingData != null) {
+            Set<String> rSet = new HashSet<String>();
+            for (FeatureActivation feature : carRegistrationRequest.getFeatureSet())
+            {
+                rSet.add(feature.getFeature_name());
             }
-        }
-  
-        for(FeatureActivation feature2remove : eSetToRemove)
-        {
-            existingData.removeFeature(feature2remove);
-        }
 
-        for(String feature2add : rSet)
-        {
-            existingData.addFeature(feature2add);
-        }
+            Set<FeatureActivation> eSetToRemove = new HashSet<FeatureActivation>();
+            for(FeatureActivation feature : existingData.getFeatureSet())
+            {
+                if(rSet.contains(feature.getFeature_name())) {
+                    rSet.remove(feature.getFeature_name());
+                } else {
+                    eSetToRemove.add(feature);
+                }
+            }
+    
+            for(FeatureActivation feature2remove : eSetToRemove)
+            {
+                existingData.removeFeature(feature2remove);
+            }
 
-        if(eSetToRemove.size() > 0 && rSet.size() > 0) {
-            // only when you need update, save.
-            LOG.info("saving changes to database");
-            return carRegistrationRepository.save(existingData);
-        } else 
-        {
-            LOG.info("no changes to database in this update call");
-            return getFeatureSet(vinNum);
-        }
-        
+            for(String feature2add : rSet)
+            {
+                existingData.addFeature(feature2add);
+            }
+
+            if(eSetToRemove.size() > 0 && rSet.size() > 0) {
+                // only when you need update, save.
+                LOG.info("saving changes to database");
+                return carRegistrationRepository.save(existingData);
+            } else 
+            {
+                LOG.info("no changes to database in this update call");
+                return getFeatureSet(vinNum);
+            }
+        } else {
+            throw new Exception("No car found with vin "+ vinNum);
+        }    
     }
 
     @GetMapping("/carregistrations/{vinNum}/features")
@@ -107,30 +111,40 @@ public class CarRegistrationRestController {
     }
 
     @PostMapping("/carregistrations/{vinNum}/features")
-    public CarRegistration addFeature(@PathVariable String vinNum, @Valid @RequestBody FeatureActivation featureRequest) {
+    public CarRegistration addFeature(@PathVariable String vinNum, @Valid @RequestBody FeatureActivation featureRequest)
+            throws Exception {
         // find the data from database
         CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
-        // only if this is a new feature request, save.
-        if(existingData.hasFeature(featureRequest.getFeature_name())){
-            return existingData;
-        } else {
-            existingData.addFeature(featureRequest);
-            LOG.info("saving changes to database in addFeature");
-            return carRegistrationRepository.save(existingData);
+        if(existingData != null){
+            // only if this is a new feature request, save.
+            if(existingData.hasFeature(featureRequest.getFeature_name())){
+                return existingData;
+            } else {
+                existingData.addFeature(featureRequest);
+                LOG.info("saving changes to database in addFeature");
+                return carRegistrationRepository.save(existingData);
+            }
+        }else {
+            throw new Exception("No car found with vin "+ vinNum);
         }
     }
 
     @DeleteMapping("/carregistrations/{vinNum}/features")
     public CarRegistration removeFeature(@PathVariable String vinNum, @RequestParam String featureName)
+            throws Exception
     {
         CarRegistration existingData = carRegistrationRepository.findByVinNum(vinNum);
-        // only if this is a new feature request, save.
-        if(existingData.hasFeature(featureName)){
-            existingData.removeFeature(featureName);
-            LOG.info("saving changes to database in removeFeature");
-            return carRegistrationRepository.save(existingData);
-        } else {
-            return existingData;            
+        if(existingData != null){
+            // only if this is a new feature request, save.
+            if(existingData.hasFeature(featureName)){
+                existingData.removeFeature(featureName);
+                LOG.info("saving changes to database in removeFeature");
+                return carRegistrationRepository.save(existingData);
+            } else {
+                return existingData;            
+            }
+        }else {
+            throw new Exception("No car found with vin "+ vinNum);
         }
 
     }
