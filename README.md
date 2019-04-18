@@ -40,11 +40,6 @@
   ```sh
   mvn clean package fabric8:build -Paks  -DskipTests -Ddocker.image.prefix=${YOUR_ACR_LOGIN_SERVER}
   ```
-
-  - mvn command to build fabic8-maven-plugin
-  ```sh
-  mvn clean package fabric8:build -Paks  -DskipTests
-  ```
   - Push the image generated from the previous step. Use the version number suffix from the build
   ```sh
   docker push ${YOUR_ACR_LOGIN_SERVER}/${IMAGENAME}:${VERSION}
