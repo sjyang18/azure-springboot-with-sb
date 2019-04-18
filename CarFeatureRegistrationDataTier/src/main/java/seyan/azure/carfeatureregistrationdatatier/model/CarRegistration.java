@@ -24,7 +24,7 @@ public class CarRegistration {
     @Column(unique=true)
     private String vinNum;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval=true, fetch=FetchType.EAGER, targetEntity=FeatureActivation.class)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval=true, targetEntity=FeatureActivation.class)
     private List<FeatureActivation> featureSet = new ArrayList<>();
 
     public Long getId() {

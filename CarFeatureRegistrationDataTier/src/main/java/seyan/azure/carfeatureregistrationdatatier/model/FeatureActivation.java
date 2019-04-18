@@ -25,7 +25,7 @@ public class FeatureActivation {
     private String feature_name; 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="carregistration_id")
+    @JoinColumn(name="carregistrations_id")
     private CarRegistration carRegId;
 
 	public Long getId() {
