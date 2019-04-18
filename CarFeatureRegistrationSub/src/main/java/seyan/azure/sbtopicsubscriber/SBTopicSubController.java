@@ -22,6 +22,7 @@ import com.microsoft.azure.servicebus.primitives.ConnectionStringBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -55,7 +56,9 @@ public class SBTopicSubController {
     @Value("${LOGIC_SERVICE_ENDPOINT}")
     private String logic_service_endpoint;
 
-    private SubscriptionClient sbclient1 = null;
+    private SubscriptionClient sbclient1;
+    @Autowired
+    private LogicTierInvokeService logicService;
 
     @GetMapping("/health")
     public Map<String, Object> health() {
@@ -66,6 +69,7 @@ public class SBTopicSubController {
         return map;
     }
 
+
     @PostConstruct
     public void init() throws Exception {
         this.sbclient1 = new SubscriptionClient(
@@ -74,24 +78,6 @@ public class SBTopicSubController {
         registerMessageHandler();
 
         LOG.info("Ready to receive topic message from " + topic_name);
-    }
-
-    @Async
-    private CompletableFuture<String> registervin(CarRegistrationRequest request) throws Exception {
-        final String baseUrl = logic_service_endpoint + "/carfeatureregistry/vins";
-        RestTemplate restTemplate = new RestTemplate();
-        LOG.info("Posting a request to " + baseUrl);
-        ResponseEntity<String> result = restTemplate.postForEntity(new URI(baseUrl), request, String.class);
-        return CompletableFuture.completedFuture(result.getBody());
-    }
-
-    @Async
-    private CompletableFuture<String> changeFeatures(FeatureChangeRequest request) throws Exception {
-        final String baseUrl = logic_service_endpoint + String.format("/carfeatureregistry/vins/%s/features", request.getVinNum());
-        RestTemplate restTemplate = new RestTemplate();
-        LOG.info("Sending a post request to " + baseUrl);
-        ResponseEntity<String> result = restTemplate.postForEntity(new URI(baseUrl), request, String.class);
-        return CompletableFuture.completedFuture(result.getBody());
     }
 
     private void registerMessageHandler() throws Exception {
@@ -112,8 +98,7 @@ public class SBTopicSubController {
                         LOG.info("CarRegistrationRequest recevied : " + request);
                         LOG.info(" VIN_NUM: " + request.getVinNum());
                         try {
-                            CompletableFuture<String> result = registervin(request);
-
+                            CompletableFuture<String> result = logicService.registervin(request);
                             result.thenRunAsync(() -> {
                                 LOG.info("CarRegistrationRequest processed");
                                 try {
@@ -140,8 +125,7 @@ public class SBTopicSubController {
                         LOG.info(" VIN_NUM: " + request.getVinNum());
                         LOG.info(" body : " + new String(body, UTF_8));
                         try {
-                            CompletableFuture<String> result = changeFeatures(request);
-
+                            CompletableFuture<String> result = logicService.changeFeatures(request);
                             result.thenRunAsync(() -> {
                                 LOG.info("FeatureChangeRequest processed");
                                 try {
