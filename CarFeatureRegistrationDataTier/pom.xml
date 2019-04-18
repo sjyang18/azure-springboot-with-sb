@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>seyan.azure</groupId>
 	<artifactId>carfeatureregistrationdatatier</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.0.3-SNAPSHOT</version>
 	<name>datatier</name>
 	<description>datatier project for car-registry</description>
 

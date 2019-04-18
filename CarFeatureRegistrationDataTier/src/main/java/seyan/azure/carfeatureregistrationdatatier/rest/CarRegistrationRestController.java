@@ -90,7 +90,7 @@ public class CarRegistrationRestController {
                 existingData.addFeature(feature2add);
             }
 
-            if(eSetToRemove.size() > 0 && rSet.size() > 0) {
+            if(eSetToRemove.size() > 0 || rSet.size() > 0) {
                 // only when you need update, save.
                 LOG.info("saving changes to database");
                 return carRegistrationRepository.save(existingData);
