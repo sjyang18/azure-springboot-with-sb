@@ -44,7 +44,7 @@
   ```sh
   docker push ${YOUR_ACR_LOGIN_SERVER}/${IMAGENAME}:${VERSION}
   ```
-  - mvn command to build fabic8-maven-plugin
+  - mvn command to build fabic8-maven-plugin. Override 'docker.image.prefix' with your acr login server.
   ```sh
-  mvn fabric8:resource fabric8:build -Paks  -DskipTests
+  mvn fabric8:resource fabric8:build -Paks  -DskipTests -Ddocker.image.prefix=${YOUR_ACR_LOGIN_SERVER}
   ```
