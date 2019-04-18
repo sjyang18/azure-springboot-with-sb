@@ -22,7 +22,7 @@
   ```
   - mvn command to build and deploy with fabic8-maven-plugin
   ```sh
-  mvn package fabric8:build fabric8:resource fabric8:deploy -DskipTests -Pocp
+  mvn clean package fabric8:build fabric8:resource fabric8:deploy -DskipTests -Pocp
   ```
 
 ## 4. Deployment on Azure Kubernetes Service(AKS) 
