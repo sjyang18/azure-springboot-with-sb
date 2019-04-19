@@ -53,6 +53,26 @@
 						<artifactId>fabric8-maven-plugin</artifactId>
 						<version>${fabric8.version}</version>
 					</plugin>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.6.0</version>
+						<executions>
+							<execution>
+							<id>push</id>
+								<goals>
+								<goal>exec</goal>
+								</goals>
+								<configuration>
+								<executable>docker</executable>
+								<arguments>
+									<argument>push</argument>
+									<argument>${docker.image.prefix}/${project.artifactId}:${project.version}</argument>
+								</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
 				</plugins>
 			</build>
 		</profile>
