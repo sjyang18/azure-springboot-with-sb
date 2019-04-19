@@ -1,5 +1,5 @@
 spec:
-  replicas: 2
+  replicas: ${fabric8.enricher.fmp-controller.replicaCount}
   template:
     spec:
       containers:
@@ -14,3 +14,10 @@ spec:
             secretKeyRef:
               name: outputqueue-secret
               key: QUEUE_NAME
+        resources:
+          limits:
+            cpu: 400m
+            memory: 600Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi

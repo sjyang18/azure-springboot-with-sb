@@ -1,6 +1,5 @@
 package seyan.azure.customernotifier.datamodel;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class FeatureChangePayload {

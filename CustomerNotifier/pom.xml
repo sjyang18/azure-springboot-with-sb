@@ -17,6 +17,7 @@
 	<properties>
 		<java.version>1.8</java.version>
 		<azure.version>2.1.2</azure.version>
+		<fabric8.enricher.fmp-controller.replicaCount>2</fabric8.enricher.fmp-controller.replicaCount>
 	</properties>
 	<profiles>
 		<profile>
