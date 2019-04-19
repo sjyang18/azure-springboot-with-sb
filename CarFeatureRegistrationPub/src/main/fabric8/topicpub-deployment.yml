@@ -15,3 +15,10 @@ spec:
             secretKeyRef:
               name: topicsb-secret
               key: SB_CONNECTIONSTRING
+        resources:
+          limits:
+            cpu: 400m
+            memory: 600Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi

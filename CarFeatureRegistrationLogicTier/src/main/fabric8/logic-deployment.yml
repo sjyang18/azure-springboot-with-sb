@@ -1,3 +1,5 @@
+metadata:
+  namespace: car-registry
 spec:
   replicas: ${replicaCount}
   template:

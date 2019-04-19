@@ -9,8 +9,6 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.PostConstruct;
 import static java.nio.charset.StandardCharsets.*;
 
-import java.net.URI;
-
 import com.google.gson.Gson;
 import com.microsoft.azure.servicebus.ExceptionPhase;
 import com.microsoft.azure.servicebus.IMessage;
@@ -24,11 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 import seyan.azure.sbtopicsubscriber.model.CarRegistrationRequest;
 import seyan.azure.sbtopicsubscriber.model.FeatureChangeRequest;
@@ -38,8 +33,6 @@ public class SBTopicSubController {
     static final Gson GSON = new Gson();
 
     private static final Logger LOG = LoggerFactory.getLogger(SBTopicSubController.class);
-
-    private static final Object Void = null;
 
     @Value("${HOSTNAME:NOTKNOWN}")
     private String hostname;

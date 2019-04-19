@@ -17,3 +17,11 @@ spec:
             secretKeyRef:
               name: postgres-secret
               key: PASSWORD
+        resources:
+          limits:
+            cpu: 400m
+            memory: 600Mi
+          requests:
+            cpu: 200m
+            memory: 350Mi
+
