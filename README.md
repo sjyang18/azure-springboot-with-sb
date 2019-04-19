@@ -5,7 +5,7 @@
 ## 2. Pre-requisites/Azure Platform setup
 - Create a namespace called 'car-registry' by applying [deploymentconfigtemplate/1.namespace.json](deploymentconfigtemplate/1.namespace.json).
 
-- Setup a Azure Postgresql server and create mydb DB inside. 
+- Setup a Azure Postgresql server and create 'mydb' DB inside. If your database name is not 'mydb', you will override 'databasename' in mvn command (e.g. -Ddatabasename=mydb-dev).
 ```sql
 -- Database: mydb
 
