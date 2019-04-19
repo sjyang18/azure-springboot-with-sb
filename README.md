@@ -61,7 +61,9 @@ kubectl config set-context $(kubectl config current-context) --namespace=car-reg
   ```
   - Push the image generated from the previous step. Use the version number suffix from the build
   ```sh
-  docker push ${YOUR_ACR_LOGIN_SERVER}/${IMAGENAME}:${VERSION}
+  #docker push ${YOUR_ACR_LOGIN_SERVER}/${IMAGENAME}:${VERSION} // replaced by the maven way
+  mvn exec:exec@push -Paks
+  # if the command above generate authentication error, rerun `az acr login` command
   ```
   - mvn command to build fabic8-maven-plugin. Override 'docker.image.prefix' with your acr login server.
   ```sh
