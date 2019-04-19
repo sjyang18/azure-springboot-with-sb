@@ -27,7 +27,7 @@
 
 ## 4. Deployment on Azure Kubernetes Service(AKS) 
 
-- Set the namespace of current kubernetes conext to 'car-registry'. Related issue/fixed can be found in [fabirc8-maven-plugin](https://github.com/fabric8io/fabric8-maven-plugin/pull/1614/commits/f10e00d62387d85e9ba7813793c15fb358e39b8e) will be available in the future release.
+- Set the namespace of current kubernetes conext to 'car-registry'. Related issue/fixed can be found in [fabirc8-maven-plugin](https://github.com/fabric8io/fabric8-maven-plugin/pull/1614) will be available in the future release.
 ```sh
 kubectl config set-context $(kubectl config current-context) --namespace=car-registry
 ```
