@@ -6,7 +6,7 @@ spec:
       containers:
       - env:
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:postgresql://postressql/mydb
+          value: jdbc:postgresql://postressql/${databasename}
         - name: SPRING_DATASOURCE_USERNAME
           valueFrom:
             secretKeyRef:
